@@ -314,7 +314,7 @@ If you use this framework in your research, please cite:
 ```bibtex
 @software{dp_federated_learning,
   title={Federated Learning with Differential Privacy and Advanced Aggregation Strategies},
-  author={qiuqiu035},
+  author={Hongyu Guo},
   year={2025},
   url={https://github.com/qiuqiu035/dp-federated-learning}
 }
