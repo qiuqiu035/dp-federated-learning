@@ -1,0 +1,11 @@
+# requirements.txt
+
+torch
+torchvision
+torchaudio
+opacus
+flwr[simulation]
+numpy
+pandas
+matplotlib
+scikit-learn

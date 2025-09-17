@@ -1,0 +1,154 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dp-federated-learning"
+version = "0.1.0"
+description = "Federated Learning with Differential Privacy using Flower and Opacus"
+
+dependencies = [
+    "torch>=1.12.0",
+    "torchvision>=0.13.0",
+    "opacus>=1.4.0,<1.6.0",
+    "flwr>=1.6.0",
+    "numpy>=1.21.0",
+    "packaging>=21.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+    "mypy>=0.991",
+]
+
+[tool.flwr.app]
+publisher = "dp-federated-learning"
+
+[tool.flwr.app.components]
+serverapp = "server:app"
+clientapp = "client:app"
+
+[tool.flwr.app.config]
+num-server-rounds = 10
+
+[tool.flwr.federations]
+default = "local-simulation"
+
+[tool.flwr.federations.local-simulation]
+options.num-supernodes = 100
+
+[tool.flwr.federations.local-simulation.supernode]
+backend.client-resources.num-cpus = 2  
+backend.client-resources.num-gpus = 0.2  
+
+backend.client-resources.memory = 12288  
+
+node-config = [
+    {partition-id = 0},
+    {partition-id = 1},
+    {partition-id = 2},
+    {partition-id = 3},
+    {partition-id = 4},
+    {partition-id = 5},
+    {partition-id = 6},
+    {partition-id = 7},
+    {partition-id = 8},
+    {partition-id = 9},
+    {partition-id = 10},
+    {partition-id = 11},
+    {partition-id = 12},
+    {partition-id = 13},
+    {partition-id = 14},
+    {partition-id = 15},
+    {partition-id = 16},
+    {partition-id = 17},
+    {partition-id = 18},
+    {partition-id = 19},
+    {partition-id = 20},
+    {partition-id = 21},
+    {partition-id = 22},
+    {partition-id = 23},
+    {partition-id = 24},
+    {partition-id = 25},
+    {partition-id = 26},
+    {partition-id = 27},
+    {partition-id = 28},
+    {partition-id = 29},
+    {partition-id = 30},
+    {partition-id = 31},
+    {partition-id = 32},
+    {partition-id = 33},
+    {partition-id = 34},
+    {partition-id = 35},
+    {partition-id = 36},
+    {partition-id = 37},
+    {partition-id = 38},
+    {partition-id = 39},
+    {partition-id = 40},
+    {partition-id = 41},
+    {partition-id = 42},
+    {partition-id = 43},
+    {partition-id = 44},
+    {partition-id = 45},
+    {partition-id = 46},
+    {partition-id = 47},
+    {partition-id = 48},
+    {partition-id = 49},
+    {partition-id = 50},
+    {partition-id = 51},
+    {partition-id = 52},
+    {partition-id = 53},
+    {partition-id = 54},
+    {partition-id = 55},
+    {partition-id = 56},
+    {partition-id = 57},
+    {partition-id = 58},
+    {partition-id = 59},
+    {partition-id = 60},
+    {partition-id = 61},
+    {partition-id = 62},
+    {partition-id = 63},
+    {partition-id = 64},
+    {partition-id = 65},
+    {partition-id = 66},
+    {partition-id = 67},
+    {partition-id = 68},
+    {partition-id = 69},
+    {partition-id = 70},
+    {partition-id = 71},
+    {partition-id = 72},
+    {partition-id = 73},
+    {partition-id = 74},
+    {partition-id = 75},
+    {partition-id = 76},
+    {partition-id = 77},
+    {partition-id = 78},
+    {partition-id = 79},
+    {partition-id = 80},
+    {partition-id = 81},
+    {partition-id = 82},
+    {partition-id = 83},
+    {partition-id = 84},
+    {partition-id = 85},
+    {partition-id = 86},
+    {partition-id = 87},
+    {partition-id = 88},
+    {partition-id = 89},
+    {partition-id = 90},
+    {partition-id = 91},
+    {partition-id = 92},
+    {partition-id = 93},
+    {partition-id = 94},
+    {partition-id = 95},
+    {partition-id = 96},
+    {partition-id = 97},
+    {partition-id = 98},
+    {partition-id = 99},
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
