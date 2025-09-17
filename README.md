@@ -258,8 +258,6 @@ The project implements differential privacy through two distinct noise mechanism
 - **Noise Distribution**: Laplace distribution with scale parameter b = sensitivity/epsilon
 - **Configuration**: Requires explicit epsilon_per_step parameter
 
-**Important Note**: The Gaussian and Laplace implementations provide different levels of privacy guarantees. The Gaussian mechanism offers stronger sample-level protection, while the Laplace implementation provides batch-level protection. These are not directly comparable in terms of privacy strength and are included for educational and research comparison purposes.
-
 **Additional Features**:
 - **Privacy Accountant**: Tracks privacy budget across rounds
 - **Gradient Clipping**: L2 norm clipping with configurable `max_grad_norm`
