@@ -511,7 +511,7 @@ class FlowerClient(NumPyClient):
             partition_id: The partition ID for this client (0 to num_partitions-1)
             num_partitions: Total number of data partitions (defaults to NUM_CLIENTS)
             non_iid: Whether to use Non-IID data partitioning (defaults to True)
-            alpha: Dirichlet concentration parameter (smaller = more heterogeneous, default 0.1)
+            alpha: Dirichlet concentration parameter (smaller = more heterogeneous, default 0.2)
         """
         self.partition_id = partition_id
         self.num_partitions = num_partitions
