@@ -4,7 +4,7 @@
 
 This repository contains code for the unpublished master's thesis *Differentially Private Federated Learning: Study and Implementation of Additive Noise Mechanisms*. It compares server-based and serverless learning under sample-level and client-level differential privacy.
 
-The work was completed for the Master's degree in Data Science at the University of Padova. The thesis is not public.
+The work was completed for the Master's degree in Data Science at the University of Padova. The thesis is not publicly available.
 
 ## Key comparisons
 
