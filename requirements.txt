@@ -2,13 +2,9 @@
 
 torch
 torchvision
-torchaudio
 opacus
 flwr[simulation]
 numpy
-pandas
-matplotlib
-scikit-learn
 flwr-datasets
 networkx
 pillow
