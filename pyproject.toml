@@ -12,7 +12,10 @@ dependencies = [
     "torchvision>=0.13.0",
     "opacus>=1.4.0,<1.6.0",
     "flwr>=1.6.0",
+    "flwr-datasets>=0.5.0",
     "numpy>=1.21.0",
+    "networkx>=3.0",
+    "pillow>=9.0",
     "packaging>=21.0",
 ]
 
@@ -32,19 +35,21 @@ serverapp = "server:app"
 clientapp = "client:app"
 
 [tool.flwr.app.config]
-num-server-rounds = 10
+num-server-rounds = 500
+seed = 2  # Global seed for reproducible experiments
 
 [tool.flwr.federations]
 default = "local-simulation"
 
 [tool.flwr.federations.local-simulation]
 options.num-supernodes = 100
+backend.max-concurrent-clients = 10
 
 [tool.flwr.federations.local-simulation.supernode]
-backend.client-resources.num-cpus = 2  
-backend.client-resources.num-gpus = 0.2  
+backend.client-resources.num-cpus = 4
+backend.client-resources.num-gpus = 0.1
 
-backend.client-resources.memory = 12288  
+backend.client-resources.memory = 2048
 
 node-config = [
     {partition-id = 0},

@@ -9,3 +9,7 @@ numpy
 pandas
 matplotlib
 scikit-learn
+flwr-datasets
+networkx
+pillow
+packaging

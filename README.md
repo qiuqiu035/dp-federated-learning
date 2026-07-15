@@ -1,321 +1,132 @@
-# Federated Learning with Differential Privacy and Advanced Aggregation Strategies
+# Differentially Private Federated Learning
 
-This project provides a robust and flexible framework for conducting federated learning (FL) experiments, focusing on the interplay between differential privacy (DP) and various aggregation strategies. It is built using the Flower framework and Opacus for PyTorch-based federated learning with differential privacy guarantees.
+This repository contains the implementation developed for the thesis
+*Differentially Private Federated Learning: Study and Implementation of Additive Noise Mechanisms*.
+It provides a common experimental pipeline for studying how federated-learning architecture,
+privacy granularity, and additive-noise distribution interact under heterogeneous client data.
 
-## Core Features
+The framework compares:
 
-- **Differential Privacy**: Implements DP-SGD using Opacus library with multiple noise mechanisms
-  - **Gaussian Noise Mechanism**: Sample-level differential privacy with configurable privacy budgets (standard implementation)
-  - **Laplace Noise Mechanism**: Experimental differential privacy implementation for comparative analysis
-  - **Flexible Privacy Levels**: Low (ε=15), Medium (ε=8), and High (ε=4) privacy configurations
-  - **Privacy Budget Management**: Automatic calculation of noise scales based on target epsilon values
-  - **Noise Mechanism Comparison**: Framework supports switching between Gaussian and Laplace mechanisms for research purposes
-- **Advanced Aggregation Strategies**: 
-  - **FedAvg**: Standard federated averaging algorithm
-  - **FedAdam**: Adaptive server-side optimization with momentum
-  - **Krum/Multi-Krum**: Byzantine-robust aggregation methods for adversarial environments
-- **Modular and Configurable Architecture**:
-  - **Code/Config Separation**: All experimental parameters centralized in `experiment_configs.py`
-  - **Automated Experiment Management**: `run_experiment.py` orchestrates experiments and saves results
-  - **Environment Variable Control**: Dynamic configuration through environment variables
-- **Efficient Implementation**: 
-  - Dataset caching for faster repeated experiments
-  - GPU acceleration support
-  - Memory-efficient client implementations
+- server-based FedAvg and synchronous serverless neighbor aggregation;
+- sample-level and client-level differential privacy;
+- Gaussian and Laplace additive noise;
+- full and partial client participation in the server-based setting;
+- Watts-Strogatz serverless topologies with two or four neighbors.
 
-## Project Structure
+## Methodology
 
-```
-.
-├── client.py                 # Flower client implementation with local training and evaluation
-├── server.py                 # Flower server with strategy implementations (FedAvg, FedAdam, Krum)
-├── opacus_client_dp.py       # Differential privacy wrapper using Opacus
-├── utils.py                  # Utility functions: models (CNN, MLP), data handling, training loops
-├── experiment_configs.py     # Central configuration hub for all experiments
-├── run_experiment.py         # Main orchestration script for experiments
-├── pyproject.toml           # Project metadata, dependencies, and Flower App configuration
-├── requirements.txt         # Alternative dependency specification
-└── README.md               # This documentation
-```
+Both architectures use the same MNIST model, client training logic, data partitioning, privacy
+modules, and random-seed management. The server-based path aggregates client updates through a
+Flower strategy. The serverless path performs local training followed by synchronous POST-MIX
+neighbor averaging over a fixed Watts-Strogatz graph.
+
+Sample-level DP clips per-sample gradients and injects noise during local optimization. Gaussian
+sample-level DP uses Opacus. Client-level DP clips each complete client model update and adds noise
+before communication. Gaussian privacy consumption is tracked with Renyi DP accounting; Laplace
+privacy loss is composed linearly.
+
+The thesis experiments use 100 clients, 500 communication rounds, one local epoch, batch size 64,
+an MLP on MNIST, and SGD with learning rate 0.001, momentum 0.9, and weight decay 0.0001. The main
+experiments use a Dirichlet non-IID partition with `alpha = 0.2`, target privacy budget
+`epsilon = 30`, and Gaussian `delta = 1e-5`. Sample-level clipping uses `C = 1.3`; client-level
+clipping uses `C = 0.03`. These values can be changed in the configuration modules.
+
+## Privacy interpretation
+
+The Laplace experiments deliberately retain L2 clipping and add coordinate-wise Laplace noise.
+This keeps clipping, training, and aggregation aligned with the Gaussian and Opacus pipelines so
+that the noise distribution is the primary experimental variable.
+
+This path is an engineering comparison. It is not a canonical Laplace mechanism calibrated
+directly from global L1 sensitivity. An L2 bound does not by itself justify using `C / epsilon` as
+the coordinate-wise Laplace scale for a high-dimensional vector; a formal L1-sensitivity
+calibration may require a dimension-dependent factor and can also depend on the adjacency
+definition. Results from this path should be interpreted within that experimental scope.
 
 ## Installation
 
-### Prerequisites
-- Python 3.8 or higher
-- PyTorch 1.12.0 or higher
-- CUDA-compatible GPU (optional, but recommended)
+Python 3.11 is recommended. The complete regression matrix was verified on Linux with Python
+3.11.13, PyTorch 2.5.1, torchvision 0.20.1, Opacus 1.5.4, Flower 1.22.0, and
+flwr-datasets 0.5.0.
 
-### Setup Instructions
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/qiuqiu035/dp-federated-learning.git
-   cd dp-federated-learning
-   ```
-
-2. **Create a virtual environment (recommended):**
-   ```bash
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
-   # On Linux/Mac:
-   source venv/bin/activate
-   ```
-
-3. **Install dependencies:**
-   The project uses `pyproject.toml` for dependency management:
-   ```bash
-   pip install -e .
-   ```
-   
-   Alternatively, install from requirements.txt:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### Key Dependencies
-- **flwr>=1.6.0**: Federated learning framework
-- **torch>=1.12.0**: Deep learning framework
-- **opacus>=1.4.0,<1.6.0**: Differential privacy for PyTorch
-- **torchvision>=0.13.0**: Computer vision datasets and transforms
-- **numpy>=1.21.0**: Numerical computing
-
-## Usage
-
-### Running Experiments
-
-The `run_experiment.py` script is the main entry point for all experiments. It reads configurations from `experiment_configs.py` and manages the federated learning process.
-
-#### Single Experiment
-Run a specific experiment by name:
 ```bash
-python run_experiment.py <experiment_name>
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-Example:
+On Windows, activate the environment with `.venv\Scripts\activate`.
+
+## Running experiments
+
+List the server-based configurations:
+
 ```bash
-python run_experiment.py fedadam_medium_privacy
+python run_experiment.py --list
 ```
 
-#### List Available Experiments
-View all configured experiments:
+Run one server-based experiment:
+
 ```bash
-python run_experiment.py
+python run_experiment.py --config fedavg_baseline --seed 2
+python run_experiment.py --config fedavg_privacy --seed 2
+python run_experiment.py --config fedavg_localdpmod_gaussian --seed 2
 ```
 
-#### Predefined Experiment Sets
-Run multiple related experiments:
+Use `python run_experiment.py --all` to run every server-based configuration sequentially.
 
-**Baseline experiments (No DP):**
+List and run serverless configurations:
+
 ```bash
-python run_experiment.py all_baseline
+python run_serverless_experiment.py --list
+python run_serverless_experiment.py --config serverless_fedavg_baseline_ws --seed 2
+python run_serverless_experiment.py --config serverless_fedavg_privacy_ws --seed 2
+python run_serverless_experiment.py --config serverless_fedavg_localdpmod_gaussian_ws --seed 2
 ```
 
-**All privacy experiments:**
-```bash
-python run_experiment.py all_privacy
-```
+Results are written under `results/`; MNIST is downloaded under `data/`. Both directories are
+ignored by Git.
 
-**Compare aggregation strategies:**
-```bash
-python run_experiment.py compare_aggregation
-```
+### Available experiment families
 
-### Available Experiments
+| Architecture | Privacy level | Noise | Configurations |
+|---|---|---|---|
+| Server | None | None | `fedavg_baseline` |
+| Server | Sample | Gaussian / Laplace | `fedavg_privacy`, `fedavg_privacy_0.1`, `fedavg_laplace_privacy` |
+| Server | Client | Gaussian / Laplace | `fedavg_localdpmod_gaussian`, `fedavg_localdpmod_gaussian_0.1`, `fedavg_localdpmod_laplace` |
+| Serverless | None | None | `serverless_fedavg_baseline_ws`, `serverless_fedavg_baseline_ws_4` |
+| Serverless | Sample | Gaussian / Laplace | `serverless_fedavg_privacy_ws`, `serverless_fedavg_privacy_ws_4`, `serverless_fedavg_laplace_privacy_ws_4` |
+| Serverless | Client | Gaussian / Laplace | `serverless_fedavg_localdpmod_gaussian_ws`, `serverless_fedavg_localdpmod_gaussian_ws_4`, `serverless_fedavg_localdpmod_laplace_ws_4` |
 
-#### FedAvg Experiments
-- `fedavg_baseline`: Standard FedAvg without differential privacy
-- `fedavg_low_privacy`: FedAvg with low privacy (ε=0.15)
-- `fedavg_medium_privacy`: FedAvg with medium privacy (ε=0.08)
-- `fedavg_high_privacy`: FedAvg with high privacy (ε=0.04)
+## CPU, GPU, and cluster execution
 
-#### FedAdam Experiments
-- `fedadam_baseline`: FedAdam without differential privacy
-- `fedadam_low_privacy`: FedAdam with low privacy (ε=0.15)
-- `fedadam_medium_privacy`: FedAdam with medium privacy (ε=0.08)
-- `fedadam_high_privacy`: FedAdam with high privacy (ε=0.04)
+The code selects CUDA when it is visible to the process and otherwise uses CPU. A CUDA-enabled
+PyTorch build does not allocate a GPU by itself: a Slurm job must request GPU resources, and the
+Flower client resource settings in `pyproject.toml` must fit the allocation. CPU-only execution is
+supported and was used for the compact regression suite.
 
-#### Krum Experiments
-- `krum_baseline`: Krum aggregation without differential privacy
-- `krum_medium_privacy`: Krum with medium privacy (ε=0.08)
-- `multikrum_medium_privacy`: Multi-Krum with medium privacy (ε=0.08)
+For privacy comparisons, execution length and privacy-calibration length are separate. Short test
+runs may execute one round while retaining `privacy_calibration_rounds = 500`, keeping per-round
+calibration consistent with the full thesis configuration.
 
-### Experiment Configuration
+## Repository structure
 
-All experiment parameters are defined in `experiment_configs.py`. Each experiment configuration includes:
+- `client.py` - Flower client, local training, and sample-level DP integration.
+- `server.py` - server-based strategies, aggregation, evaluation, and accounting.
+- `serverless_runner.py` - synchronous decentralized training and POST-MIX aggregation.
+- `experiment_configs.py` and `serverless_experiment_configs.py` - controlled experiment definitions.
+- `opacus_client_dp.py` - sample-level Gaussian and experimental Laplace paths.
+- `localdp_adapter.py` and `localdpmod/` - client-update clipping and noise injection.
+- `privacy_accountant.py` - Gaussian RDP and Laplace composition utilities.
+- `seed_manager.py` and `utils.py` - reproducibility, data loading, models, and topology helpers.
 
-- **Aggregation method**: `fedavg`, `fedadam`, or `krum`
-- **Client optimizer**: `sgd` or `adam`
-- **Privacy settings**: `use_dp`, `target_epsilon`, `max_grad_norm`, `delta`
-- **Noise mechanism**: `gaussian` (default) or `laplace` for experimental comparison
-- **Training parameters**: Number of rounds, local epochs, batch size
-- **Strategy-specific parameters**: Krum parameters, FedAdam learning rates
+## Scope of the reported findings
 
-Example configurations:
+In the thesis experiments, server-based aggregation was more accurate and stable than the tested
+serverless topologies, and Gaussian noise was more reliable than Laplace noise across the evaluated
+privacy granularities. These are empirical findings for the MNIST/MLP, synchronous-participation,
+static-topology setup; they should not be treated as universal claims about all federated systems.
 
-**Gaussian Noise (Standard):**
-```python
-"fedavg_medium_privacy": {
-    "description": "FedAvg + SGD with Gaussian DP (Medium Privacy, target_epsilon=0.08).",
-    "aggregation_method": "fedavg",
-    "client_optimizer": "sgd",
-    "use_dp": True,
-    "target_epsilon": 0.08,
-    "max_grad_norm": 1.2,
-    "delta": 1e-5,
-    "noise_mechanism": "gaussian"
-}
-```
-
-**Laplace Noise (Experimental):**
-```python
-"fedavg_medium_privacy_laplace": {
-    "description": "FedAvg + SGD with Laplace DP (Medium Privacy, experimental).",
-    "aggregation_method": "fedavg",
-    "client_optimizer": "sgd",
-    "use_dp": True,
-    "noise_mechanism": "laplace",
-    "epsilon_per_step": 0.01,
-    "max_grad_norm": 1.2,
-    "delta": 0.0
-}
-```
-
-### Results and Logging
-
-All experiment results are automatically saved in the `results/` directory, organized by experiment name:
-
-```
-results/
-├── fedavg_baseline/
-│   ├── config.json          # Experiment configuration
-│   ├── experiment_log.txt   # Detailed execution logs
-│   └── final_results.json   # Final accuracy and metrics
-├── fedadam_medium_privacy/
-│   └── ...
-└── ...
-```
-
-## Customization
-
-### Adding New Experiments
-
-1. Open `experiment_configs.py`
-2. Add a new entry to the `EXPERIMENT_CONFIGS` dictionary:
-   ```python
-   "my_custom_experiment": {
-       "description": "Custom experiment description",
-       "aggregation_method": "fedavg",
-       "client_optimizer": "sgd",
-       "use_dp": True,
-       "target_epsilon": 0.1,
-       # ... other parameters
-   }
-   ```
-
-### Modifying Models and Datasets
-
-The `utils.py` file contains:
-- **Model definitions**: `SimpleCNN`, `MLP`
-- **Data loading**: `load_datasets()` function
-- **Training/testing loops**: `train()`, `test()` functions
-
-To use a different dataset:
-1. Modify the `DATASET_NAME` constant in `client.py`
-2. Update the `load_datasets()` function in `utils.py`
-
-### Adjusting Federated Learning Parameters
-
-**Server-side parameters** (in `server.py`):
-- `fraction_fit`: Fraction of clients participating in each round
-- `min_fit_clients`: Minimum number of clients for training
-- `min_available_clients`: Minimum clients needed to start
-
-**Client-side parameters** (in `client.py`):
-- `LOCAL_EPOCHS`: Number of local training epochs
-- `BATCH_SIZE`: Training batch size
-- Learning rates and optimization parameters
-
-## Technical Details
-
-### Differential Privacy Implementation
-
-The project implements differential privacy through two distinct noise mechanisms:
-
-#### Gaussian Noise (Standard Implementation)
-- **Framework**: Built on Opacus PrivacyEngine
-- **Privacy Level**: Sample-level differential privacy
-- **Mechanism**: DP-SGD with per-sample gradient computation and clipping
-- **Privacy Accounting**: RDP (Rényi Differential Privacy) accountant for tight privacy bounds
-- **Noise Distribution**: Gaussian noise added to aggregated per-sample gradients
-- **Configuration**: Supports both fixed noise multiplier and target epsilon approaches
-
-#### Laplace Noise (Experimental Implementation)
-- **Framework**: Custom implementation extending Opacus
-- **Privacy Level**: Batch-level differential privacy
-- **Mechanism**: Laplace noise added to batch-averaged gradients
-- **Privacy Accounting**: Linear epsilon accumulation (pure ε-differential privacy)
-- **Noise Distribution**: Laplace distribution with scale parameter b = sensitivity/epsilon
-- **Configuration**: Requires explicit epsilon_per_step parameter
-
-**Additional Features**:
-- **Privacy Accountant**: Tracks privacy budget across rounds
-- **Gradient Clipping**: L2 norm clipping with configurable `max_grad_norm`
-- **Noise Addition**: Noise calibrated to achieve target epsilon values
-- **Privacy Analysis**: Automatic computation of privacy guarantees
-
-### Aggregation Strategies
-
-**FedAvg**: Weighted averaging based on client dataset sizes
-**FedAdam**: Server-side adaptive optimization with momentum and bias correction
-**Krum**: Byzantine-robust aggregation selecting the most representative update
-**Multi-Krum**: Extension of Krum averaging multiple selected updates
-
-### Performance Considerations
-
-- **GPU Utilization**: Automatic GPU detection and usage
-- **Memory Management**: Efficient cleanup and garbage collection
-- **Caching**: Dataset caching to avoid repeated loading
-- **Parallel Processing**: Configurable client resources in `pyproject.toml`
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CUDA Out of Memory**: Reduce batch size or disable GPU in `client.py`
-2. **Opacus Compatibility**: Ensure PyTorch version matches Opacus requirements
-3. **Privacy Budget Exhaustion**: Reduce target epsilon or number of rounds
-
-### Logging and Debugging
-
-Enable detailed logging by setting environment variables:
-```bash
-export PYTHONPATH=.
-export FL_LOG_LEVEL=DEBUG
-python run_experiment.py <experiment_name>
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Implement changes with appropriate tests
-4. Update documentation as needed
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License. See LICENSE file for details.
-
-## Citation
-
-If you use this framework in your research, please cite:
-
-```bibtex
-@software{dp_federated_learning,
-  title={Federated Learning with Differential Privacy and Advanced Aggregation Strategies},
-  author={Hongyu Guo},
-  year={2025},
-  url={https://github.com/qiuqiu035/dp-federated-learning}
-}
-```
+Natural extensions include larger datasets and models, dynamic or asynchronous networks, broader
+epsilon sweeps, variable participation, and secure aggregation.

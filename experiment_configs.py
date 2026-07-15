@@ -2,242 +2,162 @@
 
 """
 Central configuration file for all experiments.
-Includes support for different aggregation methods and optimization strategies.
+This is now the SINGLE source of truth for experiment configurations.
 
 Key Changes:
-1. FedAdam uses Adam clients, other aggregation methods use SGD clients
-2. Target epsilon values updated to proper DP levels (0.15, 0.08, 0.04)
-3. Number of rounds is controlled by the server, not individual experiments
+1. Removed flawed set_environment_from_config function entirely
+2. Renamed target_epsilon to round_target_epsilon for clarity
+3. Simplified to be a pure configuration dictionary
+4. Server.py is now responsible for loading and applying these configs
 """
 
-# A dictionary holding the configuration for each experiment.
+# Privacy budgets are calibrated for the full thesis run, independently of a
+# shorter smoke-test execution.
+DEFAULT_PRIVACY_CALIBRATION_ROUNDS = 500
+
+# The definitive experiment configurations dictionary
 EXPERIMENT_CONFIGS = {
     # ==================== FedAvg Experiments ====================
     "fedavg_baseline": {
-        "description": "FedAvg without differential privacy (baseline).",
+        "description": "FedAvg without DP (baseline).",
         "aggregation_method": "fedavg",
         "client_optimizer": "sgd",
         "use_dp": False,
+        "enable_gradient_diagnostics": True,
+        "learning_rate": 0.001,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "client_fraction": 1,  # 100% client participation
+        "seed": 2,
     },
-    "fedavg_low_privacy": {
-        "description": "FedAvg + SGD with Gaussian DP (Low Privacy, target_epsilon=0.15).",
+
+    "fedavg_privacy": {
+        "description": "FedAvg with sample-level Gaussian DP and full participation.",
         "aggregation_method": "fedavg",
         "client_optimizer": "sgd",
         "use_dp": True,
-        "target_epsilon": 0.15,
-        "max_grad_norm": 1.2,
+        "dp_mode": "opacus",
+        "noise_mechanism": "gaussian",
+        "total_epsilon": 30,
+        "max_grad_norm": 1.3,
         "delta": 1e-5,
+        "learning_rate": 0.001,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "client_fraction": 1,
+        "seed": 2,
     },
-    "fedavg_medium_privacy": {
-        "description": "FedAvg + SGD with Gaussian DP (Medium Privacy, target_epsilon=0.08).",
+    "fedavg_privacy_0.1": {
+        "description": "FedAvg with sample-level Gaussian DP and 10% participation.",
         "aggregation_method": "fedavg",
         "client_optimizer": "sgd",
         "use_dp": True,
-        "target_epsilon": 0.08,
-        "max_grad_norm": 1.2,
+        "dp_mode": "opacus",
+        "noise_mechanism": "gaussian",
+        "total_epsilon": 30,
+        "max_grad_norm": 1.3,
         "delta": 1e-5,
+        "learning_rate": 0.001,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "client_fraction": 0.1,
+        "seed": 2,
     },
-    "fedavg_high_privacy": {
-        "description": "FedAvg + SGD with Gaussian DP (High Privacy, target_epsilon=0.04).",
+
+    "fedavg_laplace_privacy": {
+        "description": "FedAvg with sample-level L2 clipping and coordinate-wise Laplace noise (engineering comparison).",
         "aggregation_method": "fedavg",
         "client_optimizer": "sgd",
         "use_dp": True,
-        "target_epsilon": 0.04,
-        "max_grad_norm": 1.2,
-        "delta": 1e-5,
-    },
-
-    # ==================== FedAdam Experiments ====================
-    "fedadam_baseline": {
-        "description": "FedAdam server + Adam client without DP.",
-        "aggregation_method": "fedadam",
-        "adam_beta1": 0.9,
-        "adam_beta2": 0.999,
-        "adam_eta": 0.001,
-        "client_optimizer": "adam",  
-        "client_adam_beta1": 0.9,
-        "client_adam_beta2": 0.999,
-        "client_adam_eps": 1e-8,
-        "use_dp": False,
-    },
-    "fedadam_low_privacy": {
-        "description": "FedAdam server + Adam client with Gaussian DP (Low Privacy).",
-        "aggregation_method": "fedadam",
-        "adam_beta1": 0.9,
-        "adam_beta2": 0.999,
-        "adam_eta": 0.001,
-        "client_optimizer": "adam",
-        "client_adam_beta1": 0.9,
-        "client_adam_beta2": 0.999,
-        "client_adam_eps": 1e-8,
-        "use_dp": True,
-        "target_epsilon": 0.15,
-        "max_grad_norm": 1.2,
-        "delta": 1e-5,
-    },
-    "fedadam_medium_privacy": {
-        "description": "FedAdam server + Adam client with Gaussian DP (Medium Privacy).",
-        "aggregation_method": "fedadam",
-        "adam_beta1": 0.9,
-        "adam_beta2": 0.999,
-        "adam_eta": 0.001,
-        "client_optimizer": "adam",
-        "client_adam_beta1": 0.9,
-        "client_adam_beta2": 0.999,
-        "client_adam_eps": 1e-8,
-        "use_dp": True,
-        "target_epsilon": 0.08,
-        "max_grad_norm": 1.2,
-        "delta": 1e-5,
-    },
-    "fedadam_high_privacy": {
-        "description": "FedAdam server + Adam client with Gaussian DP (High Privacy).",
-        "aggregation_method": "fedadam",
-        "adam_beta1": 0.9,
-        "adam_beta2": 0.999,
-        "adam_eta": 0.001,
-        "client_optimizer": "adam",
-        "client_adam_beta1": 0.9,
-        "client_adam_beta2": 0.999,
-        "client_adam_eps": 1e-8,
-        "use_dp": True,
-        "target_epsilon": 0.04,
-        "max_grad_norm": 1.2,
-        "delta": 1e-5,
-    },
-
-    # ==================== Single Krum Experiments ====================
-    "single_krum_baseline": {
-        "description": "Single Krum (Byzantine-robust) without DP.",
-        "aggregation_method": "krum",
-        "krum_f": 2,  
-        "krum_multi": False,
-        "client_optimizer": "sgd",  
-        "use_dp": False,
-    },
-    "single_krum_low_privacy": {
-        "description": "Single Krum with Gaussian DP (Low Privacy).",
-        "aggregation_method": "krum",
-        "krum_f": 2,
-        "krum_multi": False,
-        "client_optimizer": "sgd",
-        "use_dp": True,
-        "target_epsilon": 0.15,
-        "max_grad_norm": 1.2,
-        "delta": 1e-5,
-    },
-    "single_krum_medium_privacy": {
-        "description": "Single Krum with Gaussian DP (Medium Privacy).",
-        "aggregation_method": "krum",
-        "krum_f": 2,
-        "krum_multi": False,
-        "client_optimizer": "sgd",
-        "use_dp": True,
-        "target_epsilon": 0.08,
-        "max_grad_norm": 1.2,
-        "delta": 1e-5,
-    },
-    "single_krum_high_privacy": {
-        "description": "Single Krum with Gaussian DP (High Privacy).",
-        "aggregation_method": "krum",
-        "krum_f": 2,
-        "krum_multi": False,
-        "client_optimizer": "sgd",
-        "use_dp": True,
-        "target_epsilon": 0.04,
-        "max_grad_norm": 1.2,
-        "delta": 1e-5,
-    },
-
-    # ==================== Multi-Krum Experiments ====================
-    "multi_krum_baseline": {
-        "description": "Multi-Krum (selects n-f clients) without DP.",
-        "aggregation_method": "krum",
-        "krum_f": 2,
-        "krum_multi": True,
-        "client_optimizer": "sgd",  
-        "use_dp": False,
-    },
-    "multi_krum_low_privacy": {
-        "description": "Multi-Krum with Gaussian DP (Low Privacy).",
-        "aggregation_method": "krum",
-        "krum_f": 2,
-        "krum_multi": True,
-        "client_optimizer": "sgd",
-        "use_dp": True,
-        "target_epsilon": 0.15,
-        "max_grad_norm": 1.2,
-        "delta": 1e-5,
-    },
-    "multi_krum_medium_privacy": {
-        "description": "Multi-Krum with Gaussian DP (Medium Privacy).",
-        "aggregation_method": "krum",
-        "krum_f": 2,
-        "krum_multi": True,
-        "client_optimizer": "sgd",
-        "use_dp": True,
-        "target_epsilon": 0.08,
-        "max_grad_norm": 1.2,
-        "delta": 1e-5,
-    },
-    "multi_krum_high_privacy": {
-        "description": "Multi-Krum with Gaussian DP (High Privacy).",
-        "aggregation_method": "krum",
-        "krum_f": 2,
-        "krum_multi": True,
-        "client_optimizer": "sgd",
-        "use_dp": True,
-        "target_epsilon": 0.04,
-        "max_grad_norm": 1.2,
-        "delta": 1e-5,
-    },
-
-    # ==================== Laplace DP Experiments ====================
-    "fedavg_laplace_low_privacy": {
-        "description": "FedAvg with Laplace DP (Low Privacy). epsilon_per_step=0.004687 (~15.0 total)",
-        "aggregation_method": "fedavg",
-        "client_optimizer": "sgd",
-        "use_dp": True,
+        "dp_mode": "opacus",
         "noise_mechanism": "laplace",
-        "epsilon_per_step": 0.004687,
-        "target_epsilon": 15.0,  
-        "max_grad_norm": 1.2,
+        "total_epsilon": 30,
+        "noise_multiplier": 1.0,
+        "max_grad_norm": 1.3,
+        "learning_rate": 0.001,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "client_fraction": 1,
+        "seed": 2,
     },
-    "fedavg_laplace_medium_privacy": {
-        "description": "FedAvg with Laplace DP (Medium Privacy). epsilon_per_step=0.0025 (~8.0 total)",
+
+    # ==================== LocalDpMod Experiments ====================
+
+
+    "fedavg_localdpmod_laplace": {
+        "description": "FedAvg with client-level Laplace DP (total epsilon=30).",
         "aggregation_method": "fedavg",
         "client_optimizer": "sgd",
         "use_dp": True,
+        "dp_mode": "client",
         "noise_mechanism": "laplace",
-        "epsilon_per_step": 0.0025,
-        "target_epsilon": 8.0,
-        "max_grad_norm": 1.2,
+        "max_grad_norm": 0.03,
+        "total_epsilon": 30,  # Fixed: Client-level DP unified budget
+        "learning_rate": 0.001,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "client_fraction": 1,
+        "seed": 2,
     },
-    "fedavg_laplace_high_privacy": {
-        "description": "FedAvg with Laplace DP (High Privacy). epsilon_per_step=0.00125 (~4.0 total)",
+
+    "fedavg_localdpmod_gaussian": {
+        "description": "FedAvg with client-level Gaussian DP and full participation.",
         "aggregation_method": "fedavg",
         "client_optimizer": "sgd",
         "use_dp": True,
-        "noise_mechanism": "laplace",
-        "epsilon_per_step": 0.00125,
-        "target_epsilon": 4.0,
-        "max_grad_norm": 1.2,
+        "dp_mode": "client",
+        "noise_mechanism": "gaussian",
+        "max_grad_norm": 0.03,
+        "noise_multiplier": 5.015147,
+        "total_epsilon": 30,  # Adjusted from 150 to 30
+        "delta": 1e-5,
+        "learning_rate": 0.001,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "client_fraction": 1,
+        "seed": 2,
     },
+
+    "fedavg_localdpmod_gaussian_0.1": {
+        "description": "FedAvg with client-level Gaussian DP and 10% participation.",
+        "aggregation_method": "fedavg",
+        "client_optimizer": "sgd",
+        "use_dp": True,
+        "dp_mode": "client",
+        "noise_mechanism": "gaussian",
+        "max_grad_norm": 0.03,
+        "noise_multiplier": 0.785528,
+        "total_epsilon": 30,  # Adjusted from 150 to 30
+        "delta": 1e-5,
+        "learning_rate": 0.001,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "client_fraction": 0.1,
+        "seed": 2,
+    },
+
+
 }
+
 
 def get_experiment_config(name: str) -> dict:
     """
     Returns the configuration dictionary for a given experiment name.
+    This is now the ONLY function needed in this file.
     """
     if name not in EXPERIMENT_CONFIGS:
         raise ValueError(f"Experiment '{name}' not defined in experiment_configs.py")
-    return EXPERIMENT_CONFIGS[name]
+    config = EXPERIMENT_CONFIGS[name].copy()
+    config.setdefault("privacy_calibration_rounds", DEFAULT_PRIVACY_CALIBRATION_ROUNDS)
+    return config
+
 
 def list_available_experiments() -> list:
     """
     Returns a list of all available experiment names.
     """
     return list(EXPERIMENT_CONFIGS.keys())
+
 
 def list_experiments_by_category() -> dict:
     """
@@ -249,12 +169,15 @@ def list_experiments_by_category() -> dict:
         "Single Krum": [],
         "Multi-Krum": [],
         "Laplace DP": [],
+        "LocalDpMod": [],
     }
-    
+
     for name, config in EXPERIMENT_CONFIGS.items():
         desc = config["description"].lower()
-        
-        if "laplace" in desc:
+
+        if "localdpmod" in desc or config.get("dp_mode") == "client":
+            categories["LocalDpMod"].append(name)
+        elif "laplace" in desc:
             categories["Laplace DP"].append(name)
         elif config.get("aggregation_method") == "fedadam":
             categories["FedAdam"].append(name)
@@ -264,97 +187,30 @@ def list_experiments_by_category() -> dict:
             categories["Single Krum"].append(name)
         else:
             categories["FedAvg"].append(name)
-    
+
     return categories
 
-def set_environment_from_config(config: dict) -> None:
-    """
-    Set environment variables based on configuration dictionary.
-    This bridges the gap between the config file and the existing server implementation.
-    """
-    import os
-    
-    # Map config keys to environment variable names
-    env_mapping = {
-        "aggregation_method": "AGGREGATION_METHOD",
-        "client_optimizer": "CLIENT_OPTIMIZER",
-        
-        # FedAdam parameters
-        "adam_beta1": "ADAM_BETA1",
-        "adam_beta2": "ADAM_BETA2", 
-        "adam_eta": "ADAM_ETA",
-        
-        # Krum parameters
-        "krum_f": "KRUM_F",
-        "krum_multi": "KRUM_MULTI",
-        
-        # Client Adam parameters
-        "client_adam_beta1": "CLIENT_ADAM_BETA1",
-        "client_adam_beta2": "CLIENT_ADAM_BETA2",
-        "client_adam_eps": "CLIENT_ADAM_EPS",
-        
-        # DP parameters
-        "noise_mechanism": "NOISE_MECHANISM",
-        "epsilon_per_step": "EPSILON_PER_STEP",
-        "target_epsilon": "TARGET_EPSILON",
-        "max_grad_norm": "MAX_GRAD_NORM",
-        "delta": "DELTA",
-    }
-    
-    # Set environment variables
-    for config_key, env_var in env_mapping.items():
-        if config_key in config:
-            value = config[config_key]
-            if isinstance(value, bool):
-                os.environ[env_var] = "true" if value else "false"
-            else:
-                os.environ[env_var] = str(value)
-    
-    # Set use_dp based on the config
-    if "use_dp" in config:
-        # If use_dp is False, set EXPERIMENT_MODE to baseline
-        # If use_dp is True, we'll let the server determine the mode based on other parameters
-        if not config["use_dp"]:
-            os.environ["EXPERIMENT_MODE"] = "baseline"
-        else:
-            # Determine DP mode based on parameters
-            if "noise_mechanism" in config and config["noise_mechanism"] == "laplace":
-                if "epsilon_per_step" in config:
-                    eps = config["epsilon_per_step"]
-                    if eps >= 0.004:
-                        os.environ["EXPERIMENT_MODE"] = "laplace_low_privacy"
-                    elif eps >= 0.002:
-                        os.environ["EXPERIMENT_MODE"] = "laplace_medium_privacy"
-                    else:
-                        os.environ["EXPERIMENT_MODE"] = "laplace_high_privacy"
-            elif "target_epsilon" in config:
-                target_eps = config["target_epsilon"]
-                if target_eps >= 0.12:
-                    os.environ["EXPERIMENT_MODE"] = "low_privacy"
-                elif target_eps >= 0.06:
-                    os.environ["EXPERIMENT_MODE"] = "medium_privacy"
-                else:
-                    os.environ["EXPERIMENT_MODE"] = "high_privacy"
-            else:
-                os.environ["EXPERIMENT_MODE"] = "medium_privacy" 
 
 def print_available_experiments() -> None:
     """
     Print all available experiments organized by category.
     """
     categories = list_experiments_by_category()
-    
+
     print("=== Available Experiments ===\n")
-    
+
     for category, experiments in categories.items():
         if experiments:  # Only show categories that have experiments
             print(f"{category}:")
             for exp in experiments:
                 config = get_experiment_config(exp)
-                print(f"  • {exp}: {config['description']}")
+                print(f"  - {exp}: {config['description']}")
             print()
-    
+
     print(f"Total: {len(list_available_experiments())} experiments available")
     print("\nUsage:")
     print("  python run_experiment.py <experiment_name>")
-    print("  Example: python run_experiment.py fedadam_adam_medium_privacy")
+    print("  Example: python run_experiment.py fedavg_privacy")
+
+
+# --- Clean and simple: These are the essential utility functions ---
